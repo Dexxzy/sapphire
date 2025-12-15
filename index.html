@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; img-src 'self' data: blob:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sapphire</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="node_modules/quill/dist/quill.snow.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="app-brand">
+          <div class="app-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#3b82f6"/>
+              <path d="M2 17L12 22L22 17" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h1 class="app-title">Sapphire</h1>
+        </div>
+        <button id="new-note-btn" class="btn-icon" title="New Note (Cmd+N)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="sidebar-search">
+        <div class="search-container">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="M21 21l-4.35-4.35"></path>
+          </svg>
+          <input type="text" id="search-input" placeholder="Search notes..." class="search-input">
+          <kbd class="search-shortcut">Cmd+F</kbd>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button id="daily-note-btn" class="quick-action-btn" title="Today's Daily Note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span>Daily Note</span>
+        </button>
+        <button id="command-palette-btn" class="quick-action-btn" title="Command Palette (Cmd+P)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span>Commands</span>
+          <kbd>Cmd+P</kbd>
+        </button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="sidebar-nav">
+        <button class="nav-tab active" data-view="all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          All Notes
+        </button>
+        <button class="nav-tab" data-view="favorites">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          Favorites
+        </button>
+        <button class="nav-tab" data-view="tags">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+          Tags
+        </button>
+        <button class="nav-tab" data-view="trash">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Trash
+        </button>
+      </div>
+
+      <!-- Sort Options -->
+      <div class="sort-options">
+        <select id="sort-select" class="sort-select">
+          <option value="updatedAt-desc">Last Modified</option>
+          <option value="updatedAt-asc">Oldest Modified</option>
+          <option value="createdAt-desc">Newest Created</option>
+          <option value="createdAt-asc">Oldest Created</option>
+          <option value="title-asc">Title A-Z</option>
+          <option value="title-desc">Title Z-A</option>
+        </select>
+      </div>
+
+      <!-- Tags Panel (hidden by default) -->
+      <div class="tags-panel hidden" id="tags-panel">
+        <div class="tags-list" id="tags-list"></div>
+      </div>
+
+      <!-- Notes List -->
+      <div class="notes-list" id="notes-list"></div>
+
+      <!-- Trash Panel (hidden by default) -->
+      <div class="trash-panel hidden" id="trash-panel">
+        <div class="trash-header">
+          <span>Deleted Notes</span>
+          <button id="empty-trash-btn" class="btn-text-danger">Empty Trash</button>
+        </div>
+        <div class="trash-list" id="trash-list"></div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <button id="settings-btn" class="sidebar-footer-btn" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button id="vault-btn" class="sidebar-footer-btn" title="Open Vault Folder">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </button>
+        <button id="import-btn" class="sidebar-footer-btn" title="Import Notes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Resize Handle -->
+    <div class="sidebar-resize" id="sidebar-resize"></div>
+
+    <!-- Main Editor Area -->
+    <main class="editor-container" id="editor-container">
+      <!-- Editor Header -->
+      <div class="editor-header" id="editor-header">
+        <div class="editor-header-left">
+          <input type="text" id="note-title" class="note-title-input" placeholder="Untitled">
+        </div>
+        <div class="editor-header-right">
+          <button id="pin-btn" class="btn-icon" title="Pin Note">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </button>
+          <button id="favorite-btn" class="btn-icon" title="Favorite">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </button>
+          <div class="btn-divider"></div>
+          <button id="split-view-btn" class="btn-icon" title="Split View">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="12" y1="3" x2="12" y2="21"></line>
+            </svg>
+          </button>
+          <button id="focus-mode-btn" class="btn-icon" title="Focus Mode (Cmd+Shift+F)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
+          <div class="btn-divider"></div>
+          <button id="history-btn" class="btn-icon" title="Version History">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </button>
+          <button id="duplicate-btn" class="btn-icon" title="Duplicate Note">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+          <button id="export-btn" class="btn-icon" title="Export">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </button>
+          <button id="delete-btn" class="btn-icon btn-danger" title="Delete">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+          <button id="more-btn" class="btn-icon" title="More Options">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tags Bar -->
+      <div class="tags-bar" id="tags-bar">
+        <div class="note-tags" id="note-tags"></div>
+        <button id="add-tag-btn" class="add-tag-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add tag
+        </button>
+      </div>
+
+      <!-- Toolbar -->
+      <div id="toolbar" class="editor-toolbar">
+        <span class="ql-formats">
+          <select class="ql-header">
+            <option value="1">H1</option>
+            <option value="2">H2</option>
+            <option value="3">H3</option>
+            <option selected>Normal</option>
+          </select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-bold" title="Bold (Cmd+B)"></button>
+          <button class="ql-italic" title="Italic (Cmd+I)"></button>
+          <button class="ql-underline" title="Underline (Cmd+U)"></button>
+          <button class="ql-strike" title="Strikethrough"></button>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-color" title="Text Color"></select>
+          <select class="ql-background" title="Background Color"></select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-list" value="ordered" title="Numbered List"></button>
+          <button class="ql-list" value="bullet" title="Bullet List"></button>
+          <button class="ql-list" value="check" title="Checklist"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-indent" value="-1" title="Decrease Indent"></button>
+          <button class="ql-indent" value="+1" title="Increase Indent"></button>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-align" title="Alignment"></select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-blockquote" title="Quote"></button>
+          <button class="ql-code-block" title="Code Block"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-link" title="Link (Cmd+K)"></button>
+          <button class="ql-image" title="Image"></button>
+        </span>
+        <span class="ql-formats">
+          <button id="insert-table-btn" class="ql-table" title="Insert Table">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="3" y1="15" x2="21" y2="15"></line>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+              <line x1="15" y1="3" x2="15" y2="21"></line>
+            </svg>
+          </button>
+          <button id="insert-divider-btn" class="ql-divider" title="Insert Divider">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+            </svg>
+          </button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-clean" title="Clear Formatting"></button>
+        </span>
+        <span class="ql-formats toolbar-right">
+          <button id="ai-btn" class="toolbar-toggle ai-toolbar-btn" title="AI Assistant (Cmd+J)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+              <path d="M18 14h.5a2.5 2.5 0 0 1 0 5H18"/>
+              <path d="M6 14h-.5a2.5 2.5 0 0 0 0 5H6"/>
+              <path d="M6 10V9a6 6 0 0 1 12 0v1"/>
+              <path d="M12 19v3"/>
+              <path d="M8 22h8"/>
+            </svg>
+          </button>
+          <button id="typewriter-btn" class="toolbar-toggle" title="Typewriter Mode">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+              <line x1="6" y1="10" x2="6" y2="10.01"></line>
+              <line x1="10" y1="10" x2="10" y2="10.01"></line>
+              <line x1="14" y1="10" x2="14" y2="10.01"></line>
+              <line x1="18" y1="10" x2="18" y2="10.01"></line>
+              <line x1="8" y1="14" x2="16" y2="14"></line>
+            </svg>
+          </button>
+        </span>
+      </div>
+
+      <!-- Editor Wrapper (for split view) -->
+      <div class="editor-wrapper" id="editor-wrapper">
+        <!-- Main Editor -->
+        <div class="editor-pane" id="editor-pane">
+          <div id="editor"></div>
+        </div>
+
+        <!-- Split View Pane (hidden by default) -->
+        <div class="split-pane hidden" id="split-pane">
+          <div class="split-pane-header">
+            <span id="split-note-title">Select a note</span>
+            <button id="close-split-btn" class="btn-icon-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div id="split-editor"></div>
+        </div>
+      </div>
+
+      <!-- Backlinks Panel -->
+      <div class="backlinks-panel" id="backlinks-panel">
+        <div class="backlinks-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span>Backlinks</span>
+          <span class="backlinks-count" id="backlinks-count">0</span>
+        </div>
+        <div class="backlinks-list" id="backlinks-list"></div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar" id="status-bar">
+        <div class="status-left">
+          <span id="save-status" class="status-item">Ready</span>
+        </div>
+        <div class="status-right">
+          <span id="word-count" class="status-item">0 words</span>
+          <span class="status-divider"></span>
+          <span id="char-count" class="status-item">0 chars</span>
+          <span class="status-divider"></span>
+          <span id="reading-time" class="status-item">0 min read</span>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="empty-state">
+        <div class="empty-state-icon">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+            <path d="M2 17L12 22L22 17"/>
+            <path d="M2 12L12 17L22 12"/>
+          </svg>
+        </div>
+        <h2>Welcome to Sapphire</h2>
+        <p>Your private, local-first notes</p>
+        <div class="empty-actions">
+          <button id="empty-new-note" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Create Note
+          </button>
+          <button id="empty-daily-note" class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Daily Note
+          </button>
+        </div>
+        <div class="empty-shortcuts">
+          <div class="shortcut"><kbd>Cmd</kbd><kbd>N</kbd> New note</div>
+          <div class="shortcut"><kbd>Cmd</kbd><kbd>P</kbd> Commands</div>
+          <div class="shortcut"><kbd>Cmd</kbd><kbd>F</kbd> Search</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Command Palette Modal -->
+  <div id="command-palette" class="modal hidden">
+    <div class="command-palette-content">
+      <input type="text" id="command-input" class="command-input" placeholder="Type a command or search notes...">
+      <div class="command-list" id="command-list"></div>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Export Note</h3>
+      <div class="export-options">
+        <button class="export-option" data-format="html">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <span>HTML</span>
+        </button>
+        <button class="export-option" data-format="md">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span>Markdown</span>
+        </button>
+        <button class="export-option" data-format="txt">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span>Plain Text</span>
+        </button>
+        <button class="export-option" data-format="json">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+          <span>JSON</span>
+        </button>
+      </div>
+      <button id="cancel-export" class="btn-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" class="modal hidden">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>Version History</h3>
+        <button id="close-history" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="history-container">
+        <div class="history-list" id="history-list"></div>
+        <div class="history-preview" id="history-preview">
+          <p class="history-empty">Select a version to preview</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button id="close-settings" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="settings-container">
+        <div class="settings-section">
+          <h4>Editor</h4>
+          <div class="setting-item">
+            <label>Font Size</label>
+            <input type="range" id="font-size-setting" min="12" max="24" value="16">
+            <span id="font-size-value">16px</span>
+          </div>
+          <div class="setting-item">
+            <label>Line Height</label>
+            <input type="range" id="line-height-setting" min="1.4" max="2.4" step="0.1" value="1.8">
+            <span id="line-height-value">1.8</span>
+          </div>
+          <div class="setting-item">
+            <label>Spellcheck</label>
+            <input type="checkbox" id="spellcheck-setting" checked>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h4>Appearance</h4>
+          <div class="setting-item">
+            <label>Show Word Count</label>
+            <input type="checkbox" id="wordcount-setting" checked>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h4>AI (Ollama)</h4>
+          <div class="setting-item">
+            <label>Enable AI Features</label>
+            <input type="checkbox" id="ai-enabled-setting" checked>
+          </div>
+          <div class="setting-item">
+            <label>Default Model</label>
+            <select id="ai-model-setting" class="setting-select">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label>AI Status</label>
+            <span id="ai-status-setting" class="setting-status">Checking...</span>
+          </div>
+          <div class="setting-item">
+            <button id="ai-refresh-status" class="btn-secondary-sm">Refresh Status</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h4>About</h4>
+          <p class="setting-about">Sapphire v1.0.0</p>
+          <p class="setting-about-sub">Your notes are stored locally and never leave your device.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template Modal -->
+  <div id="template-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Choose a Template</h3>
+      <div class="template-list" id="template-list"></div>
+      <button id="cancel-template" class="btn-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Tag Input Modal -->
+  <div id="tag-modal" class="modal hidden">
+    <div class="modal-content modal-sm">
+      <h3>Add Tag</h3>
+      <input type="text" id="tag-input" class="tag-input" placeholder="Enter tag name...">
+      <div class="existing-tags" id="existing-tags"></div>
+      <div class="modal-actions">
+        <button id="cancel-tag" class="btn-cancel">Cancel</button>
+        <button id="confirm-tag" class="btn-primary">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note Link Modal -->
+  <div id="link-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Link to Note</h3>
+      <input type="text" id="link-search" class="link-search" placeholder="Search notes...">
+      <div class="link-results" id="link-results"></div>
+      <button id="cancel-link" class="btn-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- More Options Dropdown -->
+  <div id="more-dropdown" class="dropdown hidden">
+    <button class="dropdown-item" id="menu-duplicate">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      Duplicate
+    </button>
+    <button class="dropdown-item" id="menu-template">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="3" y1="9" x2="21" y2="9"></line>
+        <line x1="9" y1="21" x2="9" y2="9"></line>
+      </svg>
+      Save as Template
+    </button>
+    <div class="dropdown-divider"></div>
+    <button class="dropdown-item" id="menu-copy-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>
+      Copy Note Link
+    </button>
+    <button class="dropdown-item" id="menu-word-count">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="4" y1="9" x2="20" y2="9"></line>
+        <line x1="4" y1="15" x2="20" y2="15"></line>
+        <line x1="10" y1="3" x2="8" y2="21"></line>
+        <line x1="16" y1="3" x2="14" y2="21"></line>
+      </svg>
+      Word Count Details
+    </button>
+    <div class="dropdown-divider"></div>
+    <button class="dropdown-item text-danger" id="menu-delete">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+      Move to Trash
+    </button>
+  </div>
+
+  <!-- AI Panel (Right Sidebar) -->
+  <aside class="ai-panel hidden" id="ai-panel">
+    <div class="ai-panel-header">
+      <div class="ai-panel-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+          <path d="M18 14h.5a2.5 2.5 0 0 1 0 5H18"/>
+          <path d="M6 14h-.5a2.5 2.5 0 0 0 0 5H6"/>
+          <path d="M6 10V9a6 6 0 0 1 12 0v1"/>
+          <path d="M12 19v3"/>
+          <path d="M8 22h8"/>
+        </svg>
+        <span>AI Assistant</span>
+      </div>
+      <div class="ai-panel-status" id="ai-status">
+        <span class="ai-status-dot offline"></span>
+        <span class="ai-status-text">Checking...</span>
+      </div>
+      <button id="close-ai-panel" class="btn-icon-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- AI Model Selector -->
+    <div class="ai-model-selector">
+      <label>Model:</label>
+      <select id="ai-model-select">
+        <option value="">Loading...</option>
+      </select>
+    </div>
+
+    <!-- AI Quick Actions -->
+    <div class="ai-actions">
+      <h4>Quick Actions</h4>
+      <div class="ai-action-grid">
+        <button class="ai-action-btn" data-action="summarize" title="Summarize selected text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="14" y2="12"></line>
+            <line x1="4" y1="18" x2="10" y2="18"></line>
+          </svg>
+          <span>Summarize</span>
+        </button>
+        <button class="ai-action-btn" data-action="expand" title="Expand on selected text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+          <span>Expand</span>
+        </button>
+        <button class="ai-action-btn" data-action="rewrite" title="Rewrite selected text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          <span>Rewrite</span>
+        </button>
+        <button class="ai-action-btn" data-action="simplify" title="Simplify selected text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <span>Simplify</span>
+        </button>
+        <button class="ai-action-btn" data-action="professional" title="Make text more professional">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span>Professional</span>
+        </button>
+        <button class="ai-action-btn" data-action="casual" title="Make text more casual">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+          </svg>
+          <span>Casual</span>
+        </button>
+        <button class="ai-action-btn" data-action="bullets" title="Convert to bullet points">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>Bullets</span>
+        </button>
+        <button class="ai-action-btn" data-action="fix_grammar" title="Fix grammar and spelling">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>Fix Grammar</span>
+        </button>
+        <button class="ai-action-btn" data-action="explain" title="Explain selected text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Explain</span>
+        </button>
+        <button class="ai-action-btn" data-action="continue" title="Continue writing">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>Continue</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- AI Translation Actions -->
+    <div class="ai-actions">
+      <h4>Translate</h4>
+      <div class="ai-action-row">
+        <button class="ai-action-btn-sm" data-action="translate_spanish">Spanish</button>
+        <button class="ai-action-btn-sm" data-action="translate_french">French</button>
+        <button class="ai-action-btn-sm" data-action="translate_german">German</button>
+        <button class="ai-action-btn-sm" data-action="translate_chinese">Chinese</button>
+        <button class="ai-action-btn-sm" data-action="translate_japanese">Japanese</button>
+      </div>
+    </div>
+
+    <!-- AI Suggest -->
+    <div class="ai-actions">
+      <h4>Auto Suggest</h4>
+      <div class="ai-action-row">
+        <button class="ai-suggest-btn" id="ai-suggest-tags">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+          Suggest Tags
+        </button>
+        <button class="ai-suggest-btn" id="ai-suggest-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          Suggest Title
+        </button>
+      </div>
+    </div>
+
+    <!-- AI Chat -->
+    <div class="ai-chat-section">
+      <h4>Chat with AI</h4>
+      <div class="ai-chat-messages" id="ai-chat-messages">
+        <div class="ai-chat-empty">Ask anything about your note...</div>
+      </div>
+      <div class="ai-chat-input-container">
+        <textarea id="ai-chat-input" class="ai-chat-input" placeholder="Ask a question..." rows="2"></textarea>
+        <div class="ai-chat-buttons">
+          <button id="ai-chat-send" class="ai-chat-send" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+          <button id="ai-chat-cancel" class="ai-chat-cancel hidden" title="Cancel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Output Preview -->
+    <div class="ai-output hidden" id="ai-output">
+      <div class="ai-output-header">
+        <span>AI Response</span>
+        <button id="ai-output-close" class="btn-icon-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="ai-output-content" id="ai-output-content"></div>
+      <div class="ai-output-actions">
+        <button id="ai-output-replace" class="btn-primary-sm">Replace Selection</button>
+        <button id="ai-output-insert" class="btn-secondary-sm">Insert Below</button>
+        <button id="ai-output-copy" class="btn-secondary-sm">Copy</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="node_modules/quill/dist/quill.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
