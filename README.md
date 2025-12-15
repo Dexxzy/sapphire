@@ -42,7 +42,7 @@ Download the latest release for your platform from the [Releases](https://github
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/sapphire.git
+git clone https://github.com/Dexxzy/sapphire.git
 cd sapphire
 ```
 
