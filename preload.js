@@ -68,7 +68,7 @@ contextBridge.exposeInMainWorld('api', {
     chat: (params) => ipcRenderer.invoke('ai:chat', params),
     cancel: () => ipcRenderer.invoke('ai:cancel'),
     action: (params) => ipcRenderer.invoke('ai:action', params),
-    suggestTags: (content) => ipcRenderer.invoke('ai:suggest-tags', { content }),
+    suggestTags: (title, content) => ipcRenderer.invoke('ai:suggest-tags', { title, content }),
     suggestTitle: (content) => ipcRenderer.invoke('ai:suggest-title', { content }),
     onChunk: (callback) => {
       const handler = (event, data) => callback(data);

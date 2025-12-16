@@ -1479,9 +1479,11 @@ async function checkAIStatus() {
     updateAIStatusUI();
 
     if (aiStatus.running) {
-      // Load available models
-      const modelsData = await window.api.ai.models();
-      aiStatus.models = modelsData.models || [];
+      // Models are already loaded in aiStatus from the status call
+      if (!aiStatus.models || aiStatus.models.length === 0) {
+        const modelsData = await window.api.ai.models();
+        aiStatus.models = modelsData || [];
+      }
       populateModelSelect();
     }
   } catch (error) {
@@ -1648,11 +1650,22 @@ Help the user with their question about their note or provide writing assistance
 
   // Start generation
   aiIsGenerating = true;
-  aiLastResponse = '';
   updateAIGeneratingUI(true);
 
   // Add loading message
-  const loadingMsgEl = addChatMessage('Thinking...', 'assistant', true);
+  const loadingMsgEl = addChatMessage('', 'assistant', true);
+  let streamedResponse = '';
+
+  // Set up a temporary chunk handler for this chat message
+  const chatChunkHandler = (data) => {
+    if (data.chunk) {
+      streamedResponse += data.chunk;
+      loadingMsgEl.textContent = streamedResponse;
+    }
+  };
+
+  // Listen for chunks
+  const removeHandler = window.api.ai.onChunk(chatChunkHandler);
 
   try {
     const response = await window.api.ai.chat({
@@ -1663,17 +1676,29 @@ Help the user with their question about their note or provide writing assistance
       ]
     });
 
-    // Update the loading message with the response
-    loadingMsgEl.textContent = response.message?.content || response;
+    // Clean up the chunk listener
+    removeHandler();
+
+    // Use streamed response or fallback to response object
+    const responseText = streamedResponse || response.response || '';
+    loadingMsgEl.textContent = responseText;
     loadingMsgEl.classList.remove('loading');
 
     // Add to history
-    aiChatHistory.push({
-      role: 'assistant',
-      content: response.message?.content || response
-    });
+    if (responseText) {
+      aiChatHistory.push({
+        role: 'assistant',
+        content: responseText
+      });
+    }
+
+    if (response.error) {
+      loadingMsgEl.textContent = `Error: ${response.error}`;
+      loadingMsgEl.classList.add('error');
+    }
 
   } catch (error) {
+    removeHandler();
     loadingMsgEl.textContent = `Error: ${error.message}`;
     loadingMsgEl.classList.add('error');
   }
@@ -1787,11 +1812,12 @@ async function aiSuggestTags() {
     return;
   }
 
+  const title = elements.noteTitleInput.value || 'Untitled';
   showToast('Generating tag suggestions...', 'info');
 
   try {
-    const result = await window.api.ai.suggestTags(content);
-    if (result.tags && result.tags.length > 0) {
+    const result = await window.api.ai.suggestTags(title, content);
+    if (result.success && result.tags && result.tags.length > 0) {
       // Show tags in a dialog or automatically add them
       const confirmTags = confirm(`Suggested tags:\n${result.tags.join(', ')}\n\nAdd these tags to the note?`);
       if (confirmTags) {
@@ -1799,6 +1825,8 @@ async function aiSuggestTags() {
           await addTag(tag);
         }
       }
+    } else if (result.error) {
+      showToast(`Error: ${result.error}`, 'error');
     } else {
       showToast('No tags suggested', 'info');
     }
@@ -1823,13 +1851,15 @@ async function aiSuggestTitle() {
 
   try {
     const result = await window.api.ai.suggestTitle(content);
-    if (result.title) {
+    if (result.success && result.title) {
       const confirmTitle = confirm(`Suggested title:\n"${result.title}"\n\nUse this title?`);
       if (confirmTitle) {
         elements.noteTitleInput.value = result.title;
         scheduleAutoSave();
         showToast('Title updated', 'success');
       }
+    } else if (result.error) {
+      showToast(`Error: ${result.error}`, 'error');
     } else {
       showToast('No title suggested', 'info');
     }

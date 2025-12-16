@@ -203,7 +203,7 @@ const defaultSettings = {
   spellcheck: true,
   // AI Settings
   aiEnabled: true,
-  aiModel: 'llama3.2',
+  aiModel: 'gemma3:latest',
   aiAutoSuggest: false
 };
 
@@ -807,12 +807,14 @@ ipcMain.handle('ai:generate', async (event, { model, prompt, systemPrompt }) => 
     }
 
     activeAbortController = null;
+    event.sender.send('ai:complete', { response: fullResponse });
     return { success: true, response: fullResponse };
   } catch (error) {
     activeAbortController = null;
     if (error.name === 'AbortError') {
       return { success: false, cancelled: true };
     }
+    event.sender.send('ai:error', { error: error.message });
     return { success: false, error: error.message };
   }
 });
@@ -862,12 +864,14 @@ ipcMain.handle('ai:chat', async (event, { model, messages }) => {
     }
 
     activeAbortController = null;
+    event.sender.send('ai:complete', { response: fullResponse });
     return { success: true, response: fullResponse };
   } catch (error) {
     activeAbortController = null;
     if (error.name === 'AbortError') {
       return { success: false, cancelled: true };
     }
+    event.sender.send('ai:error', { error: error.message });
     return { success: false, error: error.message };
   }
 });
@@ -882,7 +886,7 @@ ipcMain.handle('ai:cancel', async () => {
   return { success: false };
 });
 
-// Quick AI actions (non-streaming for simple tasks)
+// Quick AI actions (streaming for better UX)
 ipcMain.handle('ai:action', async (event, { model, action, text }) => {
   const prompts = {
     summarize: {
@@ -925,6 +929,18 @@ ipcMain.handle('ai:action', async (event, { model, action, text }) => {
       system: 'You are a translator. Translate to French. Respond only with the translation.',
       prompt: `Translate the following to French:\n\n${text}`
     },
+    translate_german: {
+      system: 'You are a translator. Translate to German. Respond only with the translation.',
+      prompt: `Translate the following to German:\n\n${text}`
+    },
+    translate_chinese: {
+      system: 'You are a translator. Translate to Simplified Chinese. Respond only with the translation.',
+      prompt: `Translate the following to Simplified Chinese:\n\n${text}`
+    },
+    translate_japanese: {
+      system: 'You are a translator. Translate to Japanese. Respond only with the translation.',
+      prompt: `Translate the following to Japanese:\n\n${text}`
+    },
     explain: {
       system: 'You are a helpful teacher. Explain concepts clearly. Respond with a clear explanation.',
       prompt: `Explain the following in simple terms:\n\n${text}`
@@ -948,7 +964,7 @@ ipcMain.handle('ai:action', async (event, { model, action, text }) => {
         model,
         prompt: config.prompt,
         system: config.system,
-        stream: false
+        stream: true
       })
     });
 
@@ -956,24 +972,51 @@ ipcMain.handle('ai:action', async (event, { model, action, text }) => {
       throw new Error(`Ollama error: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return { success: true, response: data.response };
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n').filter(line => line.trim());
+
+      for (const line of lines) {
+        try {
+          const json = JSON.parse(line);
+          if (json.response) {
+            fullResponse += json.response;
+            event.sender.send('ai:chunk', { chunk: json.response, full: fullResponse });
+          }
+        } catch (e) {
+          // Skip invalid JSON
+        }
+      }
+    }
+
+    event.sender.send('ai:complete', { response: fullResponse });
+    return { success: true, response: fullResponse };
   } catch (error) {
+    event.sender.send('ai:error', { error: error.message });
     return { success: false, error: error.message };
   }
 });
 
 // Generate tags for note
 ipcMain.handle('ai:suggest-tags', async (event, { model, title, content }) => {
-  const plainText = content.replace(/<[^>]*>/g, '').trim();
+  const settings = loadSettings();
+  const useModel = model || settings.aiModel || 'gemma3:latest';
+  const plainText = (content || '').replace(/<[^>]*>/g, '').trim();
 
   try {
     const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
-        prompt: `Based on this note, suggest 3-5 relevant single-word tags. Return only the tags as a comma-separated list, nothing else.\n\nTitle: ${title}\n\nContent: ${plainText.substring(0, 1000)}`,
+        model: useModel,
+        prompt: `Based on this note, suggest 3-5 relevant single-word tags. Return only the tags as a comma-separated list, nothing else.\n\nTitle: ${title || 'Untitled'}\n\nContent: ${plainText.substring(0, 1000)}`,
         system: 'You are a helpful assistant that suggests relevant tags for notes. Respond only with comma-separated single-word tags.',
         stream: false
       })
@@ -993,14 +1036,16 @@ ipcMain.handle('ai:suggest-tags', async (event, { model, title, content }) => {
 
 // Generate title for note
 ipcMain.handle('ai:suggest-title', async (event, { model, content }) => {
-  const plainText = content.replace(/<[^>]*>/g, '').trim();
+  const settings = loadSettings();
+  const useModel = model || settings.aiModel || 'gemma3:latest';
+  const plainText = (content || '').replace(/<[^>]*>/g, '').trim();
 
   try {
     const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
+        model: useModel,
         prompt: `Based on this note content, suggest a short, descriptive title (max 6 words). Return only the title, nothing else.\n\n${plainText.substring(0, 500)}`,
         system: 'You are a helpful assistant. Respond only with a short title.',
         stream: false
