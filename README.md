@@ -6,18 +6,42 @@ A private, local-first note-taking application with AI integration, built with E
 
 ## Features
 
+### Core Features
 - **Rich Text Editing** - Full formatting support with Quill editor
 - **Local-First** - All notes stored locally, never leave your device
-- **Dark Mode** - Beautiful dark theme optimized for focus
+- **Dark Mode** - Beautiful geometric dark theme with animated backgrounds
 - **Tags & Organization** - Organize notes with tags and favorites
 - **Version History** - Automatic backups with restore capability
-- **Focus Mode** - Distraction-free writing environment
-- **Typewriter Mode** - Keep your cursor centered while writing
 - **Templates** - Quick-start templates for common note types
 - **Export** - Export to HTML, Markdown, Plain Text, or JSON
 - **Split View** - View two notes side by side
 - **Command Palette** - Quick access to all commands (Cmd+P)
 - **Backlinks** - See which notes link to the current note
+- **Daily Notes** - Quick access to today's note (Cmd+D)
+
+### Productivity Features
+- **Pomodoro Timer** - Built-in focus timer with customizable sessions and break times
+- **Writing Statistics** - Track total notes, words, reading time, and tags
+- **Writing Goals** - Set daily word goals and track weekly progress
+- **Activity Heatmap** - Visualize your writing activity over the past 28 days
+- **Note Graph** - Interactive force-directed graph visualization of all your notes
+- **Quick Capture** - Floating widget to quickly jot down thoughts (Cmd+Shift+N)
+
+### Focus Features
+- **Focus Mode** - Distraction-free writing environment (Cmd+Shift+F)
+- **Reading Mode** - Clean, distraction-free reading view (Cmd+R)
+- **Typewriter Mode** - Keep your cursor centered while writing
+- **Toggle Sidebar** - Hide the sidebar for maximum writing space (Cmd+\)
+
+### Note Linking
+- **Wiki-style Links** - Type `[[` to autocomplete and link to other notes
+- **Note Graph** - Visualize connections between your notes
+- **Backlinks Panel** - See which notes reference the current note
+
+### Customization
+- **Color Themes** - 6 accent colors: Blue, Purple, Pink, Cyan, Orange, Green
+- **Configurable Font Size** - Adjust editor font size to your preference
+- **Configurable Line Height** - Adjust line spacing for comfortable reading
 
 ### AI Features (Powered by Ollama)
 
@@ -36,7 +60,7 @@ A private, local-first note-taking application with AI integration, built with E
 
 ### Pre-built Binaries
 
-Download the latest release for your platform from the [Releases](https://github.com/yourusername/sapphire/releases) page.
+Download the latest release for your platform from the [Releases](https://github.com/Dexxzy/sapphire/releases) page.
 
 ### Build from Source
 
@@ -89,23 +113,42 @@ ollama serve
 
 3. Pull a model:
 ```bash
-ollama pull llama3.2
-# or any other model: mistral, codellama, etc.
+ollama pull gemma3:latest
+# or any other model: llama3.2, mistral, codellama, etc.
 ```
 
 4. Open Sapphire and press `Cmd+J` to open the AI panel
 
 ## Keyboard Shortcuts
 
+### General
 | Shortcut | Action |
 |----------|--------|
 | `Cmd+N` | New note |
 | `Cmd+S` | Save note |
 | `Cmd+F` | Search notes |
 | `Cmd+P` | Command palette |
+| `Cmd+D` | Daily note |
 | `Cmd+J` | Toggle AI panel |
-| `Cmd+Shift+F` | Toggle focus mode |
+| `Cmd+/` | Show keyboard shortcuts |
 | `Escape` | Close modals/panels |
+
+### View
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+Shift+F` | Toggle focus mode |
+| `Cmd+R` | Reading mode |
+| `Cmd+\` | Toggle sidebar |
+| `Cmd+Shift+N` | Quick capture |
+
+### Editing
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+B` | Bold |
+| `Cmd+I` | Italic |
+| `Cmd+U` | Underline |
+| `Cmd+K` | Insert link |
+| `[[` | Link to note (autocomplete) |
 
 ## Data Storage
 
