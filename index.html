@@ -126,6 +126,34 @@
 
       <!-- Sidebar Footer -->
       <div class="sidebar-footer">
+        <button id="pomodoro-btn" class="sidebar-footer-btn" title="Pomodoro Timer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </button>
+        <button id="stats-btn" class="sidebar-footer-btn" title="Statistics">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </button>
+        <button id="graph-btn" class="sidebar-footer-btn" title="Note Graph">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="18" cy="18" r="3"></circle>
+            <circle cx="18" cy="6" r="3"></circle>
+            <line x1="8.5" y1="7.5" x2="15.5" y2="16.5"></line>
+            <line x1="15.5" y1="7.5" x2="8.5" y2="7.5"></line>
+          </svg>
+        </button>
+        <button id="shortcuts-btn" class="sidebar-footer-btn" title="Keyboard Shortcuts">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+            <path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10"></path>
+          </svg>
+        </button>
         <button id="settings-btn" class="sidebar-footer-btn" title="Settings">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
@@ -802,6 +830,332 @@
       Move to Trash
     </button>
   </div>
+
+  <!-- Pomodoro Timer Modal -->
+  <div id="pomodoro-modal" class="modal hidden">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h3>Pomodoro Timer</h3>
+        <button id="close-pomodoro" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="pomodoro-container">
+        <div class="pomodoro-display">
+          <div class="pomodoro-ring">
+            <svg viewBox="0 0 100 100">
+              <circle class="pomodoro-bg" cx="50" cy="50" r="45"/>
+              <circle class="pomodoro-progress" cx="50" cy="50" r="45" id="pomodoro-ring"/>
+            </svg>
+            <div class="pomodoro-time" id="pomodoro-time">25:00</div>
+          </div>
+          <div class="pomodoro-label" id="pomodoro-label">Focus Time</div>
+        </div>
+        <div class="pomodoro-controls">
+          <button id="pomodoro-start" class="btn-primary">Start</button>
+          <button id="pomodoro-reset" class="btn-secondary">Reset</button>
+        </div>
+        <div class="pomodoro-sessions">
+          <span>Sessions: <strong id="pomodoro-sessions">0</strong></span>
+          <div class="pomodoro-dots" id="pomodoro-dots"></div>
+        </div>
+        <div class="pomodoro-settings">
+          <div class="pomodoro-setting">
+            <label>Focus (min)</label>
+            <input type="number" id="pomodoro-focus-time" value="25" min="1" max="60">
+          </div>
+          <div class="pomodoro-setting">
+            <label>Break (min)</label>
+            <input type="number" id="pomodoro-break-time" value="5" min="1" max="30">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Modal -->
+  <div id="stats-modal" class="modal hidden">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>Writing Statistics</h3>
+        <button id="close-stats" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="stats-container">
+        <div class="stats-grid">
+          <div class="stat-card stat-primary">
+            <div class="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="stat-value" id="stats-total-notes">0</div>
+            <div class="stat-label">Total Notes</div>
+          </div>
+          <div class="stat-card stat-secondary">
+            <div class="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+            </div>
+            <div class="stat-value" id="stats-total-words">0</div>
+            <div class="stat-label">Total Words</div>
+          </div>
+          <div class="stat-card stat-tertiary">
+            <div class="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="stat-value" id="stats-reading-time">0m</div>
+            <div class="stat-label">Total Reading Time</div>
+          </div>
+          <div class="stat-card stat-quaternary">
+            <div class="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+              </svg>
+            </div>
+            <div class="stat-value" id="stats-total-tags">0</div>
+            <div class="stat-label">Tags Used</div>
+          </div>
+        </div>
+        <div class="stats-goals">
+          <h4>Writing Goals</h4>
+          <div class="goal-item">
+            <div class="goal-header">
+              <span>Daily Word Goal</span>
+              <span id="goal-words-progress">0 / 500</span>
+            </div>
+            <div class="goal-bar">
+              <div class="goal-fill" id="goal-words-fill" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="goal-item">
+            <div class="goal-header">
+              <span>Notes This Week</span>
+              <span id="goal-notes-progress">0 / 7</span>
+            </div>
+            <div class="goal-bar">
+              <div class="goal-fill goal-fill-secondary" id="goal-notes-fill" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="goal-settings">
+            <label>Daily word goal:</label>
+            <input type="number" id="daily-word-goal" value="500" min="100" max="10000" step="100">
+          </div>
+        </div>
+        <div class="stats-activity">
+          <h4>Recent Activity</h4>
+          <div class="activity-heatmap" id="activity-heatmap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note Graph Modal -->
+  <div id="graph-modal" class="modal hidden">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3>Note Graph</h3>
+        <div class="graph-controls">
+          <button id="graph-zoom-in" class="btn-icon-sm" title="Zoom In">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <button id="graph-zoom-out" class="btn-icon-sm" title="Zoom Out">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <button id="graph-reset" class="btn-icon-sm" title="Reset View">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
+        </div>
+        <button id="close-graph" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="graph-container">
+        <canvas id="graph-canvas"></canvas>
+        <div class="graph-legend">
+          <div class="legend-item">
+            <span class="legend-dot primary"></span>
+            <span>Current Note</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot secondary"></span>
+            <span>Linked Notes</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot tertiary"></span>
+            <span>Other Notes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="shortcuts-modal" class="modal hidden">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>Keyboard Shortcuts</h3>
+        <button id="close-shortcuts" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="shortcuts-container">
+        <div class="shortcuts-section">
+          <h4>General</h4>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>N</kbd></span>
+            <span class="shortcut-desc">New Note</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>S</kbd></span>
+            <span class="shortcut-desc">Save Note</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>P</kbd></span>
+            <span class="shortcut-desc">Command Palette</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>F</kbd></span>
+            <span class="shortcut-desc">Search Notes</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>J</kbd></span>
+            <span class="shortcut-desc">Toggle AI Panel</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Esc</kbd></span>
+            <span class="shortcut-desc">Close Modal/Panel</span>
+          </div>
+        </div>
+        <div class="shortcuts-section">
+          <h4>Editing</h4>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>B</kbd></span>
+            <span class="shortcut-desc">Bold</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>I</kbd></span>
+            <span class="shortcut-desc">Italic</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>U</kbd></span>
+            <span class="shortcut-desc">Underline</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>K</kbd></span>
+            <span class="shortcut-desc">Insert Link</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>Shift</kbd><kbd>C</kbd></span>
+            <span class="shortcut-desc">Code Block</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>[[</kbd></span>
+            <span class="shortcut-desc">Link to Note</span>
+          </div>
+        </div>
+        <div class="shortcuts-section">
+          <h4>View</h4>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>Shift</kbd><kbd>F</kbd></span>
+            <span class="shortcut-desc">Focus Mode</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>\\</kbd></span>
+            <span class="shortcut-desc">Toggle Sidebar</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>R</kbd></span>
+            <span class="shortcut-desc">Reading Mode</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-keys"><kbd>Cmd</kbd><kbd>D</kbd></span>
+            <span class="shortcut-desc">Daily Note</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reading Mode Overlay -->
+  <div id="reading-mode" class="reading-mode hidden">
+    <div class="reading-mode-header">
+      <button id="exit-reading-mode" class="btn-secondary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        Exit Reading Mode
+      </button>
+    </div>
+    <div class="reading-mode-content">
+      <h1 id="reading-title"></h1>
+      <div id="reading-content"></div>
+    </div>
+  </div>
+
+  <!-- Note Link Autocomplete Popup -->
+  <div id="note-link-popup" class="note-link-popup hidden">
+    <div class="note-link-list" id="note-link-list"></div>
+  </div>
+
+  <!-- Quick Capture Widget -->
+  <div id="quick-capture" class="quick-capture hidden">
+    <div class="quick-capture-header">
+      <span>Quick Capture</span>
+      <button id="close-quick-capture" class="btn-icon-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <textarea id="quick-capture-text" placeholder="Jot down a quick thought..."></textarea>
+    <div class="quick-capture-actions">
+      <button id="quick-capture-save" class="btn-primary-sm">Save as Note</button>
+      <button id="quick-capture-append" class="btn-secondary-sm">Append to Current</button>
+    </div>
+  </div>
+
+  <!-- Floating Quick Capture Button -->
+  <button id="quick-capture-fab" class="quick-capture-fab" title="Quick Capture (Cmd+Shift+N)">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 20h9"></path>
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+    </svg>
+  </button>
 
   <!-- Toast Notifications -->
   <div id="toast-container" class="toast-container"></div>

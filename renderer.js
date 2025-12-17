@@ -27,6 +27,27 @@ let removeChunkListener = null;
 let removeCompleteListener = null;
 let removeErrorListener = null;
 
+// Pomodoro State
+let pomodoroTime = 25 * 60;
+let pomodoroInterval = null;
+let pomodoroIsRunning = false;
+let pomodoroIsBreak = false;
+let pomodoroSessions = 0;
+let pomodoroFocusTime = 25;
+let pomodoroBreakTime = 5;
+
+// Graph State
+let graphZoom = 1;
+let graphPan = { x: 0, y: 0 };
+let graphNodes = [];
+let graphDragging = false;
+
+// Note Link Autocomplete State
+let noteLinkActive = false;
+let noteLinkSearch = '';
+let noteLinkIndex = 0;
+let noteLinkStartPos = null;
+
 // DOM Elements
 const elements = {
   sidebar: document.getElementById('sidebar'),
@@ -75,7 +96,25 @@ const elements = {
   aiChatSend: document.getElementById('ai-chat-send'),
   aiChatCancel: document.getElementById('ai-chat-cancel'),
   aiOutput: document.getElementById('ai-output'),
-  aiOutputContent: document.getElementById('ai-output-content')
+  aiOutputContent: document.getElementById('ai-output-content'),
+  // New Feature Elements
+  pomodoroModal: document.getElementById('pomodoro-modal'),
+  pomodoroTime: document.getElementById('pomodoro-time'),
+  pomodoroLabel: document.getElementById('pomodoro-label'),
+  pomodoroRing: document.getElementById('pomodoro-ring'),
+  pomodoroDots: document.getElementById('pomodoro-dots'),
+  statsModal: document.getElementById('stats-modal'),
+  graphModal: document.getElementById('graph-modal'),
+  graphCanvas: document.getElementById('graph-canvas'),
+  shortcutsModal: document.getElementById('shortcuts-modal'),
+  readingMode: document.getElementById('reading-mode'),
+  readingTitle: document.getElementById('reading-title'),
+  readingContent: document.getElementById('reading-content'),
+  noteLinkPopup: document.getElementById('note-link-popup'),
+  noteLinkList: document.getElementById('note-link-list'),
+  quickCapture: document.getElementById('quick-capture'),
+  quickCaptureText: document.getElementById('quick-capture-text'),
+  activityHeatmap: document.getElementById('activity-heatmap')
 };
 
 // ============================================
@@ -779,6 +818,21 @@ const commands = [
   { id: 'ai-continue', title: 'AI: Continue Writing', desc: 'Continue writing from cursor', action: () => executeAIAction('continue') },
   { id: 'ai-suggest-tags', title: 'AI: Suggest Tags', desc: 'Get AI-suggested tags for note', action: () => aiSuggestTags() },
   { id: 'ai-suggest-title', title: 'AI: Suggest Title', desc: 'Get AI-suggested title for note', action: () => aiSuggestTitle() },
+  // New Feature Commands
+  { id: 'pomodoro', title: 'Pomodoro Timer', desc: 'Start a focus session', action: () => openPomodoroModal() },
+  { id: 'statistics', title: 'Statistics', desc: 'View writing statistics and goals', action: () => openStatsModal() },
+  { id: 'graph', title: 'Note Graph', desc: 'Visualize note connections', action: () => openGraphModal() },
+  { id: 'shortcuts', title: 'Keyboard Shortcuts', desc: 'View all keyboard shortcuts', shortcut: ['Cmd', '?'], action: () => openShortcutsModal() },
+  { id: 'reading', title: 'Reading Mode', desc: 'Distraction-free reading view', shortcut: ['Cmd', 'R'], action: () => enterReadingMode() },
+  { id: 'quick-capture', title: 'Quick Capture', desc: 'Quickly jot down a thought', shortcut: ['Cmd', 'Shift', 'N'], action: () => toggleQuickCapture() },
+  { id: 'toggle-sidebar', title: 'Toggle Sidebar', desc: 'Show or hide the sidebar', shortcut: ['Cmd', '\\'], action: () => toggleSidebar() },
+  { id: 'theme-blue', title: 'Theme: Blue (Default)', desc: 'Switch to blue accent color', action: () => setAccentColor('blue') },
+  { id: 'theme-purple', title: 'Theme: Purple', desc: 'Switch to purple accent color', action: () => setAccentColor('purple') },
+  { id: 'theme-pink', title: 'Theme: Pink', desc: 'Switch to pink accent color', action: () => setAccentColor('pink') },
+  { id: 'theme-cyan', title: 'Theme: Cyan', desc: 'Switch to cyan accent color', action: () => setAccentColor('cyan') },
+  { id: 'theme-orange', title: 'Theme: Orange', desc: 'Switch to orange accent color', action: () => setAccentColor('orange') },
+  { id: 'theme-green', title: 'Theme: Green', desc: 'Switch to green accent color', action: () => setAccentColor('green') },
+  { id: 'daily-note', title: 'Daily Note', desc: 'Create or open today\'s note', shortcut: ['Cmd', 'D'], action: () => createDailyNote() },
 ];
 
 function openCommandPalette() {
@@ -1357,10 +1411,14 @@ function setupEventListeners() {
   document.addEventListener('keydown', (e) => {
     const isMod = e.metaKey || e.ctrlKey;
 
-    // Cmd+N: New note
-    if (isMod && e.key === 'n') {
+    // Cmd+N: New note (Cmd+Shift+N: Quick Capture)
+    if (isMod && e.key === 'n' && !e.shiftKey) {
       e.preventDefault();
       createNewNote();
+    }
+    if (isMod && e.key === 'N' && e.shiftKey) {
+      e.preventDefault();
+      toggleQuickCapture();
     }
 
     // Cmd+S: Save note
@@ -1393,16 +1451,55 @@ function setupEventListeners() {
       toggleAIPanel();
     }
 
+    // Cmd+R: Reading mode
+    if (isMod && e.key === 'r') {
+      e.preventDefault();
+      enterReadingMode();
+    }
+
+    // Cmd+\: Toggle sidebar
+    if (isMod && e.key === '\\') {
+      e.preventDefault();
+      toggleSidebar();
+    }
+
+    // Cmd+? or Cmd+/: Show shortcuts
+    if (isMod && (e.key === '?' || e.key === '/')) {
+      e.preventDefault();
+      openShortcutsModal();
+    }
+
+    // Cmd+D: Daily note
+    if (isMod && e.key === 'd') {
+      e.preventDefault();
+      createDailyNote();
+    }
+
     // Escape: Close modals
     if (e.key === 'Escape') {
-      closeCommandPalette();
-      closeExportModal();
-      closeHistoryModal();
-      closeSettingsModal();
-      closeTemplateModal();
-      closeTagModal();
-      hideMoreDropdown();
-      hideAIOutput();
+      // Close in priority order
+      if (!elements.readingMode?.classList.contains('hidden')) {
+        exitReadingMode();
+      } else if (!elements.quickCapture?.classList.contains('hidden')) {
+        closeQuickCapture();
+      } else if (!elements.pomodoroModal?.classList.contains('hidden')) {
+        closePomodoroModal();
+      } else if (!elements.statsModal?.classList.contains('hidden')) {
+        closeStatsModal();
+      } else if (!elements.graphModal?.classList.contains('hidden')) {
+        closeGraphModal();
+      } else if (!elements.shortcutsModal?.classList.contains('hidden')) {
+        closeShortcutsModal();
+      } else {
+        closeCommandPalette();
+        closeExportModal();
+        closeHistoryModal();
+        closeSettingsModal();
+        closeTemplateModal();
+        closeTagModal();
+        hideMoreDropdown();
+        hideAIOutput();
+      }
     }
   });
 
@@ -1869,7 +1966,632 @@ async function aiSuggestTitle() {
 }
 
 // ============================================
+// POMODORO TIMER
+// ============================================
+
+function openPomodoroModal() {
+  elements.pomodoroModal.classList.remove('hidden');
+  updatePomodoroDisplay();
+  updatePomodoroDots();
+}
+
+function closePomodoroModal() {
+  elements.pomodoroModal.classList.add('hidden');
+}
+
+function startPomodoro() {
+  if (pomodoroIsRunning) {
+    pausePomodoro();
+    return;
+  }
+
+  pomodoroIsRunning = true;
+  document.getElementById('pomodoro-start').textContent = 'Pause';
+
+  pomodoroInterval = setInterval(() => {
+    pomodoroTime--;
+    updatePomodoroDisplay();
+
+    if (pomodoroTime <= 0) {
+      clearInterval(pomodoroInterval);
+      pomodoroIsRunning = false;
+
+      if (!pomodoroIsBreak) {
+        // Finished focus session
+        pomodoroSessions++;
+        updatePomodoroDots();
+        showToast(`Focus session complete! Take a ${pomodoroBreakTime} minute break.`, 'success');
+        pomodoroIsBreak = true;
+        pomodoroTime = pomodoroBreakTime * 60;
+        elements.pomodoroLabel.textContent = 'Break Time';
+        elements.pomodoroLabel.classList.add('break');
+      } else {
+        // Finished break
+        showToast('Break over! Ready for another focus session?', 'info');
+        pomodoroIsBreak = false;
+        pomodoroTime = pomodoroFocusTime * 60;
+        elements.pomodoroLabel.textContent = 'Focus Time';
+        elements.pomodoroLabel.classList.remove('break');
+      }
+
+      document.getElementById('pomodoro-start').textContent = 'Start';
+      updatePomodoroDisplay();
+    }
+  }, 1000);
+}
+
+function pausePomodoro() {
+  clearInterval(pomodoroInterval);
+  pomodoroIsRunning = false;
+  document.getElementById('pomodoro-start').textContent = 'Start';
+}
+
+function resetPomodoro() {
+  pausePomodoro();
+  pomodoroIsBreak = false;
+  pomodoroTime = pomodoroFocusTime * 60;
+  elements.pomodoroLabel.textContent = 'Focus Time';
+  elements.pomodoroLabel.classList.remove('break');
+  updatePomodoroDisplay();
+}
+
+function updatePomodoroDisplay() {
+  const minutes = Math.floor(pomodoroTime / 60);
+  const seconds = pomodoroTime % 60;
+  elements.pomodoroTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+  // Update ring progress
+  const totalTime = pomodoroIsBreak ? pomodoroBreakTime * 60 : pomodoroFocusTime * 60;
+  const progress = (totalTime - pomodoroTime) / totalTime;
+  const circumference = 283;
+  const offset = circumference - (progress * circumference);
+
+  if (elements.pomodoroRing) {
+    elements.pomodoroRing.style.strokeDashoffset = offset;
+    elements.pomodoroRing.style.stroke = pomodoroIsBreak ? 'var(--success)' : 'var(--accent-primary)';
+  }
+}
+
+function updatePomodoroDots() {
+  if (!elements.pomodoroDots) return;
+
+  elements.pomodoroDots.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const dot = document.createElement('div');
+    dot.className = `pomodoro-dot ${i < pomodoroSessions % 4 ? 'completed' : ''}`;
+    elements.pomodoroDots.appendChild(dot);
+  }
+
+  document.getElementById('pomodoro-sessions').textContent = pomodoroSessions;
+}
+
+// ============================================
+// STATISTICS
+// ============================================
+
+function openStatsModal() {
+  elements.statsModal.classList.remove('hidden');
+  updateStatistics();
+  generateActivityHeatmap();
+}
+
+function closeStatsModal() {
+  elements.statsModal.classList.add('hidden');
+}
+
+function updateStatistics() {
+  // Calculate total notes
+  document.getElementById('stats-total-notes').textContent = notes.length;
+
+  // Calculate total words
+  let totalWords = 0;
+  notes.forEach(note => {
+    if (note.wordCount) totalWords += note.wordCount;
+  });
+  document.getElementById('stats-total-words').textContent = totalWords.toLocaleString();
+
+  // Calculate reading time
+  const readingMinutes = Math.ceil(totalWords / 200);
+  document.getElementById('stats-reading-time').textContent = readingMinutes > 60
+    ? `${Math.floor(readingMinutes / 60)}h ${readingMinutes % 60}m`
+    : `${readingMinutes}m`;
+
+  // Calculate unique tags
+  const uniqueTags = new Set();
+  notes.forEach(note => {
+    (note.tags || []).forEach(tag => uniqueTags.add(tag));
+  });
+  document.getElementById('stats-total-tags').textContent = uniqueTags.size;
+
+  // Update goals
+  updateGoals(totalWords);
+}
+
+function updateGoals(totalWords) {
+  const dailyGoal = parseInt(document.getElementById('daily-word-goal')?.value) || 500;
+
+  // Get today's word count (from notes modified today)
+  const today = new Date().toDateString();
+  let todayWords = 0;
+  notes.forEach(note => {
+    if (new Date(note.updatedAt).toDateString() === today) {
+      todayWords += note.wordCount || 0;
+    }
+  });
+
+  const wordProgress = Math.min(100, (todayWords / dailyGoal) * 100);
+  document.getElementById('goal-words-progress').textContent = `${todayWords.toLocaleString()} / ${dailyGoal.toLocaleString()}`;
+  document.getElementById('goal-words-fill').style.width = `${wordProgress}%`;
+
+  // Get notes this week
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekNotes = notes.filter(note => new Date(note.createdAt) > weekAgo).length;
+  const noteProgress = Math.min(100, (weekNotes / 7) * 100);
+  document.getElementById('goal-notes-progress').textContent = `${weekNotes} / 7`;
+  document.getElementById('goal-notes-fill').style.width = `${noteProgress}%`;
+}
+
+function generateActivityHeatmap() {
+  if (!elements.activityHeatmap) return;
+
+  elements.activityHeatmap.innerHTML = '';
+
+  // Generate last 28 days
+  const today = new Date();
+  for (let i = 27; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toDateString();
+
+    // Count activity for this day
+    const activity = notes.filter(note =>
+      new Date(note.updatedAt).toDateString() === dateStr
+    ).length;
+
+    const level = activity === 0 ? '' :
+                  activity <= 1 ? 'level-1' :
+                  activity <= 3 ? 'level-2' :
+                  activity <= 5 ? 'level-3' : 'level-4';
+
+    const day = document.createElement('div');
+    day.className = `heatmap-day ${level}`;
+    day.title = `${date.toLocaleDateString()}: ${activity} note${activity !== 1 ? 's' : ''}`;
+    elements.activityHeatmap.appendChild(day);
+  }
+}
+
+// ============================================
+// NOTE GRAPH
+// ============================================
+
+function openGraphModal() {
+  elements.graphModal.classList.remove('hidden');
+  setTimeout(renderGraph, 100);
+}
+
+function closeGraphModal() {
+  elements.graphModal.classList.add('hidden');
+}
+
+function renderGraph() {
+  const canvas = elements.graphCanvas;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+
+  // Build node data
+  graphNodes = notes.map((note, index) => {
+    const angle = (index / notes.length) * Math.PI * 2;
+    const radius = Math.min(canvas.width, canvas.height) * 0.35;
+    return {
+      id: note.id,
+      title: note.title || 'Untitled',
+      x: canvas.width / 2 + Math.cos(angle) * radius * (0.5 + Math.random() * 0.5),
+      y: canvas.height / 2 + Math.sin(angle) * radius * (0.5 + Math.random() * 0.5),
+      links: note.links || [],
+      isCurrent: currentNote?.id === note.id
+    };
+  });
+
+  // Apply force simulation
+  for (let i = 0; i < 50; i++) {
+    applyForces();
+  }
+
+  drawGraph(ctx, canvas);
+
+  // Add interactivity
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    for (const node of graphNodes) {
+      const dx = x - node.x;
+      const dy = y - node.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 15) {
+        closeGraphModal();
+        loadNote(node.id);
+        break;
+      }
+    }
+  };
+}
+
+function applyForces() {
+  const k = 100; // Repulsion constant
+  const l = 150; // Ideal link length
+
+  for (let i = 0; i < graphNodes.length; i++) {
+    const node = graphNodes[i];
+    let fx = 0, fy = 0;
+
+    // Repulsion from other nodes
+    for (let j = 0; j < graphNodes.length; j++) {
+      if (i === j) continue;
+      const other = graphNodes[j];
+      const dx = node.x - other.x;
+      const dy = node.y - other.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      fx += (k * k / dist) * (dx / dist);
+      fy += (k * k / dist) * (dy / dist);
+    }
+
+    // Attraction from links
+    for (const linkId of node.links) {
+      const linked = graphNodes.find(n => n.id === linkId);
+      if (linked) {
+        const dx = linked.x - node.x;
+        const dy = linked.y - node.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        fx += (dist - l) * (dx / dist) * 0.1;
+        fy += (dist - l) * (dy / dist) * 0.1;
+      }
+    }
+
+    // Center gravity
+    const cx = elements.graphCanvas.width / 2;
+    const cy = elements.graphCanvas.height / 2;
+    fx += (cx - node.x) * 0.01;
+    fy += (cy - node.y) * 0.01;
+
+    node.x += fx * 0.1;
+    node.y += fy * 0.1;
+  }
+}
+
+function drawGraph(ctx, canvas) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw links
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+  ctx.lineWidth = 1;
+
+  for (const node of graphNodes) {
+    for (const linkId of node.links) {
+      const linked = graphNodes.find(n => n.id === linkId);
+      if (linked) {
+        ctx.beginPath();
+        ctx.moveTo(node.x, node.y);
+        ctx.lineTo(linked.x, linked.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw nodes
+  for (const node of graphNodes) {
+    const isLinked = currentNote && (node.links.includes(currentNote.id) ||
+                     graphNodes.find(n => n.id === currentNote.id)?.links.includes(node.id));
+
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.isCurrent ? 12 : 8, 0, Math.PI * 2);
+
+    if (node.isCurrent) {
+      ctx.fillStyle = '#3b82f6';
+      ctx.shadowColor = '#3b82f6';
+      ctx.shadowBlur = 15;
+    } else if (isLinked) {
+      ctx.fillStyle = '#8b5cf6';
+      ctx.shadowColor = '#8b5cf6';
+      ctx.shadowBlur = 10;
+    } else {
+      ctx.fillStyle = '#5c6370';
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Draw label
+    ctx.fillStyle = 'var(--text-secondary)';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(node.title.substring(0, 15) + (node.title.length > 15 ? '...' : ''), node.x, node.y + 22);
+  }
+}
+
+// ============================================
+// KEYBOARD SHORTCUTS
+// ============================================
+
+function openShortcutsModal() {
+  elements.shortcutsModal.classList.remove('hidden');
+}
+
+function closeShortcutsModal() {
+  elements.shortcutsModal.classList.add('hidden');
+}
+
+// ============================================
+// READING MODE
+// ============================================
+
+function enterReadingMode() {
+  if (!currentNote) {
+    showToast('Open a note first', 'error');
+    return;
+  }
+
+  elements.readingTitle.textContent = currentNote.title || 'Untitled';
+  elements.readingContent.innerHTML = quill.root.innerHTML;
+  elements.readingMode.classList.remove('hidden');
+}
+
+function exitReadingMode() {
+  elements.readingMode.classList.add('hidden');
+}
+
+// ============================================
+// QUICK CAPTURE
+// ============================================
+
+function toggleQuickCapture() {
+  elements.quickCapture.classList.toggle('hidden');
+  if (!elements.quickCapture.classList.contains('hidden')) {
+    elements.quickCaptureText.focus();
+  }
+}
+
+function closeQuickCapture() {
+  elements.quickCapture.classList.add('hidden');
+  elements.quickCaptureText.value = '';
+}
+
+async function quickCaptureSave() {
+  const text = elements.quickCaptureText.value.trim();
+  if (!text) return;
+
+  await createNewNote(`<p>${escapeHtml(text)}</p>`);
+  closeQuickCapture();
+  showToast('Quick note saved!', 'success');
+}
+
+async function quickCaptureAppend() {
+  const text = elements.quickCaptureText.value.trim();
+  if (!text || !currentNote) {
+    showToast('Open a note first', 'error');
+    return;
+  }
+
+  quill.insertText(quill.getLength(), '\n\n' + text);
+  closeQuickCapture();
+  scheduleAutoSave();
+  showToast('Added to current note', 'success');
+}
+
+// ============================================
+// NOTE LINK AUTOCOMPLETE
+// ============================================
+
+function setupNoteLinkAutocomplete() {
+  quill.on('text-change', (delta, oldDelta, source) => {
+    if (source !== 'user') return;
+
+    const selection = quill.getSelection();
+    if (!selection) return;
+
+    const text = quill.getText(0, selection.index);
+    const lastBrackets = text.lastIndexOf('[[');
+
+    if (lastBrackets !== -1 && !text.substring(lastBrackets).includes(']]')) {
+      noteLinkActive = true;
+      noteLinkSearch = text.substring(lastBrackets + 2);
+      noteLinkStartPos = lastBrackets;
+      showNoteLinkPopup(selection.index);
+    } else {
+      hideNoteLinkPopup();
+    }
+  });
+}
+
+function showNoteLinkPopup(cursorIndex) {
+  const filteredNotes = notes.filter(n =>
+    n.id !== currentNote?.id &&
+    (n.title || '').toLowerCase().includes(noteLinkSearch.toLowerCase())
+  ).slice(0, 5);
+
+  if (filteredNotes.length === 0) {
+    hideNoteLinkPopup();
+    return;
+  }
+
+  elements.noteLinkList.innerHTML = filteredNotes.map((note, i) => `
+    <div class="note-link-item ${i === noteLinkIndex ? 'active' : ''}" data-id="${note.id}" data-title="${escapeHtml(note.title)}">
+      <div class="note-link-item-title">${escapeHtml(note.title) || 'Untitled'}</div>
+    </div>
+  `).join('');
+
+  // Position popup near cursor
+  const bounds = quill.getBounds(cursorIndex);
+  const editorRect = document.getElementById('editor').getBoundingClientRect();
+  elements.noteLinkPopup.style.left = (editorRect.left + bounds.left) + 'px';
+  elements.noteLinkPopup.style.top = (editorRect.top + bounds.bottom + 5) + 'px';
+  elements.noteLinkPopup.classList.remove('hidden');
+
+  // Add click handlers
+  elements.noteLinkList.querySelectorAll('.note-link-item').forEach(item => {
+    item.addEventListener('click', () => insertNoteLink(item.dataset.title));
+  });
+}
+
+function hideNoteLinkPopup() {
+  elements.noteLinkPopup.classList.add('hidden');
+  noteLinkActive = false;
+  noteLinkSearch = '';
+  noteLinkIndex = 0;
+}
+
+function insertNoteLink(title) {
+  const selection = quill.getSelection();
+  if (!selection || noteLinkStartPos === null) return;
+
+  // Delete the [[ and search text
+  quill.deleteText(noteLinkStartPos, selection.index - noteLinkStartPos);
+
+  // Insert the link
+  quill.insertText(noteLinkStartPos, `[[${title}]]`, { color: '#3b82f6' });
+  quill.setSelection(noteLinkStartPos + title.length + 4);
+
+  hideNoteLinkPopup();
+}
+
+// ============================================
+// SIDEBAR TOGGLE
+// ============================================
+
+function toggleSidebar() {
+  document.body.classList.toggle('sidebar-hidden');
+}
+
+// ============================================
+// ACCENT COLOR
+// ============================================
+
+function setAccentColor(color) {
+  const container = document.querySelector('.app-container');
+  if (color === 'blue') {
+    container.removeAttribute('data-accent');
+  } else {
+    container.setAttribute('data-accent', color);
+  }
+  settings.accentColor = color;
+  window.api.settings.save(settings);
+  showToast(`Theme changed to ${color}`, 'success');
+}
+
+// ============================================
+// NEW FEATURE EVENT LISTENERS
+// ============================================
+
+function setupNewFeatureListeners() {
+  // Pomodoro
+  document.getElementById('pomodoro-btn')?.addEventListener('click', openPomodoroModal);
+  document.getElementById('close-pomodoro')?.addEventListener('click', closePomodoroModal);
+  document.getElementById('pomodoro-start')?.addEventListener('click', startPomodoro);
+  document.getElementById('pomodoro-reset')?.addEventListener('click', resetPomodoro);
+
+  document.getElementById('pomodoro-focus-time')?.addEventListener('change', (e) => {
+    pomodoroFocusTime = parseInt(e.target.value) || 25;
+    if (!pomodoroIsRunning && !pomodoroIsBreak) {
+      pomodoroTime = pomodoroFocusTime * 60;
+      updatePomodoroDisplay();
+    }
+  });
+
+  document.getElementById('pomodoro-break-time')?.addEventListener('change', (e) => {
+    pomodoroBreakTime = parseInt(e.target.value) || 5;
+  });
+
+  // Statistics
+  document.getElementById('stats-btn')?.addEventListener('click', openStatsModal);
+  document.getElementById('close-stats')?.addEventListener('click', closeStatsModal);
+  document.getElementById('daily-word-goal')?.addEventListener('change', () => updateStatistics());
+
+  // Graph
+  document.getElementById('graph-btn')?.addEventListener('click', openGraphModal);
+  document.getElementById('close-graph')?.addEventListener('click', closeGraphModal);
+  document.getElementById('graph-zoom-in')?.addEventListener('click', () => {
+    graphZoom *= 1.2;
+    renderGraph();
+  });
+  document.getElementById('graph-zoom-out')?.addEventListener('click', () => {
+    graphZoom /= 1.2;
+    renderGraph();
+  });
+  document.getElementById('graph-reset')?.addEventListener('click', () => {
+    graphZoom = 1;
+    graphPan = { x: 0, y: 0 };
+    renderGraph();
+  });
+
+  // Shortcuts
+  document.getElementById('shortcuts-btn')?.addEventListener('click', openShortcutsModal);
+  document.getElementById('close-shortcuts')?.addEventListener('click', closeShortcutsModal);
+
+  // Reading Mode
+  document.getElementById('exit-reading-mode')?.addEventListener('click', exitReadingMode);
+
+  // Quick Capture
+  document.getElementById('quick-capture-fab')?.addEventListener('click', toggleQuickCapture);
+  document.getElementById('close-quick-capture')?.addEventListener('click', closeQuickCapture);
+  document.getElementById('quick-capture-save')?.addEventListener('click', quickCaptureSave);
+  document.getElementById('quick-capture-append')?.addEventListener('click', quickCaptureAppend);
+
+  // Modal backdrop clicks
+  elements.pomodoroModal?.addEventListener('click', (e) => {
+    if (e.target === elements.pomodoroModal) closePomodoroModal();
+  });
+  elements.statsModal?.addEventListener('click', (e) => {
+    if (e.target === elements.statsModal) closeStatsModal();
+  });
+  elements.graphModal?.addEventListener('click', (e) => {
+    if (e.target === elements.graphModal) closeGraphModal();
+  });
+  elements.shortcutsModal?.addEventListener('click', (e) => {
+    if (e.target === elements.shortcutsModal) closeShortcutsModal();
+  });
+
+  // Note Link autocomplete keyboard handling
+  document.addEventListener('keydown', (e) => {
+    if (noteLinkActive) {
+      const items = elements.noteLinkList.querySelectorAll('.note-link-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        noteLinkIndex = Math.min(noteLinkIndex + 1, items.length - 1);
+        items.forEach((item, i) => item.classList.toggle('active', i === noteLinkIndex));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        noteLinkIndex = Math.max(noteLinkIndex - 1, 0);
+        items.forEach((item, i) => item.classList.toggle('active', i === noteLinkIndex));
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const activeItem = items[noteLinkIndex];
+        if (activeItem) insertNoteLink(activeItem.dataset.title);
+      } else if (e.key === 'Escape') {
+        hideNoteLinkPopup();
+      }
+    }
+  });
+
+  // Apply saved accent color
+  if (settings.accentColor && settings.accentColor !== 'blue') {
+    document.querySelector('.app-container')?.setAttribute('data-accent', settings.accentColor);
+  }
+}
+
+// ============================================
 // INITIALIZE
 // ============================================
 
 init();
+
+// Setup new features after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  setupNewFeatureListeners();
+  setupNoteLinkAutocomplete();
+});
